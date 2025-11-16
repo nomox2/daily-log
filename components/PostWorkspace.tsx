@@ -242,9 +242,9 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
           ? {
               ...prev,
               authorId: session.user.id,
-              author: { nickname: session.user.nickname ?? session.user.name ?? '나' },
+              author: { nickname: session.user.nickname ?? '나' },
             }
-          : buildEmptyPost(session.user.nickname ?? session.user.name ?? '나', session.user.id)
+            buildEmptyPost(session.user.nickname ?? '나', session.user.id)
       )
       setLoading(false)
     }
