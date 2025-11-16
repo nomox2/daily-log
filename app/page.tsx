@@ -121,13 +121,13 @@ export default function Home() {
         )}
 
         {selectedAuthorId && (
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white rounded-lg border border-gray-200">
-            <p className="text-sm" style={{ color: 'rgb(55, 55, 55)' }}>
+          <div className="flex flex-wrap items-center justify-between gap-3 pl-[20px] pr-4 py-0 bg-white rounded-lg border border-gray-200">
+            <p className="text-base" style={{ color: 'rgb(55, 55, 55)' }}>
               @{selectedAuthorNickname}님의 카드만 보고 있어요.
             </p>
             <button
               onClick={clearAuthorFilter}
-              className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
             >
               전체 보기
             </button>
@@ -138,7 +138,7 @@ export default function Home() {
           <div className="space-y-1">
             <h3 style={titleStyle}>주요일정 카드</h3>
             <p className="text-sm" style={{ color: 'rgb(102, 102, 102)' }}>
-              가족 일정, 병원 예약 등 오늘의 핵심 일정 카드를 모아봤어요.
+              일정, 예약, 모임, 스케쥴 등 오늘의 핵심 일정 카드를 모아봤어요.
             </p>
           </div>
           {schedulePosts.length === 0 ? (

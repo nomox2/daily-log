@@ -29,6 +29,7 @@ interface PostDetail {
   mediaUrl?: string | null
   mediaType?: 'image' | 'video' | 'audio' | null
   category?: 'schedule' | 'daily'
+  date?: string
   authorId: string
   createdAt: string
   author: {
@@ -171,7 +172,7 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
 
   useEffect(() => {
     if (mode === 'create') {
-      setTitleInput(activeTabMeta.label)
+      setTitleInput('')
     }
   }, [activeTab, activeTabMeta.label, mode])
 
@@ -198,6 +199,14 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
         setTodos(parseTodosFromContent(data.content))
         setTitleInput(data.title)
         setLikeCount(data._count.likes)
+        // initialize schedule date/time when viewing a schedule post
+        if (data.category === 'schedule' && data.date) {
+          const d = new Date(data.date)
+          const hh = String(d.getHours()).padStart(2, '0')
+          const mm = String(d.getMinutes()).padStart(2, '0')
+          setScheduleDate(d.toISOString().slice(0, 10))
+          setScheduleTime(`${hh}:${mm}`)
+        }
         if (session?.user?.id) {
           setLiked(data.likes?.some((like) => like.userId === session.user.id) ?? false)
         }
@@ -236,15 +245,18 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
       router.push('/auth/signin')
       return
     }
-    setPost((prev) =>
-      prev && prev.id === 'new'
-        ? {
-            ...prev,
-            authorId: session.user.id,
-            author: { nickname: session.user.nickname ?? '나' },
-          }
-        : buildEmptyPost(session.user.nickname ?? '나', session.user.id)
-    );
+    if (status === 'authenticated' && session?.user) {
+      setPost((prev) =>
+        prev && prev.id === 'new'
+          ? {
+              ...prev,
+              authorId: session.user.id,
+              author: { nickname: session.user.nickname ?? '나' },
+            }
+          : buildEmptyPost(session.user.nickname ?? '나', session.user.id)
+      )
+      setLoading(false)
+    }
   }, [mode, status, session?.user, router])
 
   const handleLike = async () => {
@@ -347,7 +359,7 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: post.title,
+          title: titleInput || post.title,
           content: serializeTodos(nextTodos),
           mediaUrl: post.mediaUrl ?? null,
           mediaType: post.mediaType ?? null,
@@ -598,6 +610,7 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
                 onClick={handleSubmitReply}
                 disabled={submitting}
                 className="px-4 py-2 rounded text-xs font-medium text-white bg-black hover:opacity-80 disabled:opacity-50"
+                style={{ fontSize: '14px' }}
               >
                 등록
               </button>
@@ -677,6 +690,7 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
         >
           ← 돌아가기
         </button>
+ 
 
         {mode === 'create' && (
           <div className="bg-white border border-gray-200 rounded-lg p-1 flex items-center gap-2">
@@ -699,7 +713,49 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
           </div>
         )}
 
-        {mode === 'create' && activeTab === 'schedule' && (
+        {/* 제목 입력: 생성 모드이거나, 뷰 모드 + 스케줄 카드에서만 별도 섹션으로 노출 */}
+        {(mode === 'create' || (mode === 'view' && post?.category === 'schedule')) && (
+          <section className="bg-white border border-gray-200 rounded-lg p-6 space-y-3 relative">
+            {mode === 'view' && isAuthor && (
+              <span
+                onClick={handleDelete}
+                className="absolute right-6 top-6 text-sm font-medium cursor-pointer hover:underline"
+                style={{ color: 'rgb(23, 23, 23)' }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleDelete()
+                  }
+                }}
+              >
+                삭제
+              </span>
+            )}
+            <label
+              htmlFor="postTitle"
+              className="font-semibold"
+              style={{ fontFamily: 'Pretendard, sans-serif', fontSize: '16px', color: 'rgb(23, 23, 23)' }}
+            >
+              제목
+            </label>
+            <input
+              id="postTitle"
+              type="text"
+              value={titleInput}
+              onChange={(e) => setTitleInput(e.target.value)}
+              placeholder="제목을 입력해주세요"
+              className="w-full px-4 py-2 border rounded text-base focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-400"
+              style={{ borderColor: 'rgb(229, 229, 229)', padding: '0 20px 0 20px', fontSize: '16px', color: 'rgb(23, 23, 23)', fontFamily: 'Pretendard, sans-serif' }}
+              disabled={mode === 'view' && !isAuthor}
+              maxLength={100}
+            />
+          </section>
+        )}
+
+        {(mode === 'create' && activeTab === 'schedule') ||
+        (mode === 'view' && post?.category === 'schedule') ? (
           <section className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
             <div className="flex flex-col gap-2">
               <label className="font-semibold" style={{ fontFamily: 'Pretendard, sans-serif', fontSize: '16px', color: 'rgb(23, 23, 23)' }}>
@@ -735,21 +791,20 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
             )}
 
             <div className="space-y-3 pt-2">
-              <div className="flex gap-3">
+              <div className="flex items-center gap-[10px]">
                 <input
                   type="text"
                   value={todoInput}
                   onChange={(e) => setTodoInput(e.target.value)}
                   placeholder="일정을 입력하세요"
-                  className="flex-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-black"
-                  style={{ borderColor: 'rgb(229, 229, 229)', padding: '0 0 0 20px', fontSize: '14px' }}
+                  className="flex-1 border rounded text-base focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-400"
+                  style={{ borderColor: 'rgb(229, 229, 229)', paddingLeft: '20px', fontSize: '16px', fontFamily: 'Pretendard, sans-serif' }}
                   disabled={!isAuthor}
                 />
                 <button
                   onClick={addTodoItem}
                   disabled={!isAuthor || !todoInput.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-black rounded hover:opacity-90 transition-opacity disabled:opacity-40"
-                  style={{ width: '88px' }}
+                  className="w-[80px] px-4 py-2 text-sm font-medium text-white bg-black rounded hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   추가
                 </button>
@@ -782,53 +837,51 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
               </div>
             </div>
           </section>
-        )}
+        ) : null}
 
-        {mode !== 'create' && (
-          <article className="bg-white border border-gray-200 rounded-lg px-6 pt-6 pb-0">
-            <div className="space-y-6 pb-2">
-              <div className="flex items-start justify-between gap-4">
-                <div className="w-full">
-                  <p className="text-sm mb-1" style={{ color: 'rgb(102, 102, 102)' }}>
-                    {formatDistanceToNow(new Date(post.createdAt), {
-                      addSuffix: true,
-                      locale: ko,
-                    })}
-                  </p>
-                  <h1 className="text-2xl font-semibold" style={{ color: 'rgb(23, 23, 23)' }}>
-                    {post.title}
-                  </h1>
-                </div>
-                {isAuthor && (
-                  <div className="flex items-center gap-2 text-sm whitespace-nowrap" style={{ color: 'rgb(150, 150, 150)' }}>
-                    <button
-                      onClick={handleDelete}
-                      className="inline-flex items-center hover:opacity-70 transition-opacity"
-                      style={{ color: 'rgb(23, 23, 23)', minHeight: 'auto', lineHeight: '1', padding: 0 }}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                )}
-              </div>
+        {mode !== 'create' && post?.category !== 'schedule' && (
+          <article className="bg-white border border-gray-200 rounded-lg px-6 pt-6 pb-0 relative">
+            {isAuthor && (
+              <span
+                onClick={handleDelete}
+                className="absolute right-6 top-6 text-sm font-medium cursor-pointer hover:underline"
+                style={{ color: 'rgb(23, 23, 23)' }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleDelete()
+                  }
+                }}
+              >
+                삭제
+              </span>
+            )}
+            <div className="space-y-3 pb-2">
+              <label
+                htmlFor="postTitleInline"
+                className="block text-sm font-medium"
+                style={{ color: 'rgb(23, 23, 23)' }}
+              >
+                제목
+              </label>
+              <input
+                id="postTitleInline"
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                disabled={!isAuthor}
+                placeholder="제목을 입력해주세요"
+                className="w-full px-4 py-2 border rounded text-base focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-400"
+                style={{ borderColor: 'rgb(229, 229, 229)', color: 'rgb(23, 23, 23)', paddingLeft: '20px', paddingRight: '20px', fontSize: '16px', fontFamily: 'Pretendard, sans-serif' }}
+                maxLength={100}
+              />
 
-              <div className="mt-4 border-b" style={{ borderColor: 'rgb(240, 240, 240)' }}></div>
-
-              {/* Media placeholder (optional) */}
+              {/* divider removed */}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-sm font-medium" style={{ color: 'rgb(102, 102, 102)' }}>
-                <button
-                  type="button"
-                  className="hover:text-gray-700 transition-colors"
-                  onClick={() =>
-                    router.push(`/?authorId=${post.authorId}&nickname=${encodeURIComponent(post.author.nickname)}`)
-                  }
-                >
-                  @{post.author.nickname}
-                </button>
-              </span>
+            <div className="flex items-center justify-end pt-2">
               <div className="flex items-center gap-6">
                 <button
                   onClick={handleLike}
@@ -861,7 +914,7 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
           </article>
         )}
 
-        {!(mode === 'create' && activeTab === 'schedule') && (
+        {!(mode === 'create' && activeTab === 'schedule') && !(mode === 'view' && post?.category === 'schedule') && (
           <section className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
             <div>
               <h2 className="text-lg font-semibold" style={{ color: 'rgb(23, 23, 23)' }}>
@@ -872,21 +925,20 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex items-center gap-[10px]">
               <input
                 type="text"
                 value={todoInput}
                 onChange={(e) => setTodoInput(e.target.value)}
                 placeholder="할 일을 입력하세요"
-                className="flex-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-black"
-                style={{ borderColor: 'rgb(229, 229, 229)', padding: '0 0 0 20px', fontSize: '14px' }}
+                className="flex-1 border rounded text-base focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-400"
+                style={{ borderColor: 'rgb(229, 229, 229)', paddingLeft: '20px', fontSize: '16px', fontFamily: 'Pretendard, sans-serif' }}
                 disabled={!isAuthor}
               />
               <button
                 onClick={addTodoItem}
                 disabled={!isAuthor || !todoInput.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-black rounded hover:opacity-90 transition-opacity disabled:opacity-40"
-                style={{ width: '88px' }}
+                className="w-[80px] px-4 py-2 text-sm font-medium text-white bg-black rounded hover:opacity-90 transition-opacity disabled:opacity-40"
               >
                 추가
               </button>
@@ -938,10 +990,12 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
                 onChange={(e) => setCommentInput(e.target.value)}
                 rows={4}
                 maxLength={500}
-                className="w-full px-4 border rounded resize-none focus:outline-none focus:ring-1 focus:ring-black text-sm"
+                className="w-full px-4 border rounded resize-none focus:outline-none focus:ring-1 focus:ring-black text-base placeholder:text-gray-400"
                 style={{
                   borderColor: 'rgb(229, 229, 229)',
                   color: 'rgb(23, 23, 23)',
+                  fontSize: '16px',
+                  fontFamily: 'Pretendard, sans-serif',
                   paddingTop: '16px',
                   paddingBottom: '16px',
                 }}
@@ -954,7 +1008,7 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
                   onClick={handleSubmitComment}
                   disabled={submitting || !session || !commentInput.trim()}
                   className="px-4 py-2 rounded text-xs font-medium text-white bg-black hover:opacity-90 disabled:opacity-40"
-                  style={{ width: '88px' }}
+                  style={{ width: '88px', fontSize: '14px' }}
                 >
                   등록
                 </button>
@@ -989,8 +1043,11 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
               <button
                 type="button"
                 onClick={async () => {
-                  await updateTodos(todos)
-                  alert('저장되었습니다.')
+                  const success = await updateTodos(todos)
+                  if (success) {
+                    alert('저장되었습니다.')
+                    router.push('/')
+                  }
                 }}
                 className="w-full py-3 px-6 rounded text-sm font-medium text-white bg-black hover:opacity-90 transition-opacity disabled:opacity-50"
                 style={{

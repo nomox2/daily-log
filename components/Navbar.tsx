@@ -18,7 +18,7 @@ export default function Navbar() {
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="text-2xl font-semibold" style={{ color: 'rgb(23, 23, 23)' }}>
+            <Link href="/" className="font-semibold" style={{ color: 'rgb(23, 23, 23)', fontSize: '20px' }}>
               Daily-Log
             </Link>
           </div>
@@ -54,7 +54,7 @@ export default function Navbar() {
                 </Link>
               </>
             ) : (
-              <>
+              <div className="flex items-center gap-[26px]">
                 <Link
                   href="/auth/signin"
                   className="text-sm font-medium hover:opacity-70 transition-opacity"
@@ -69,7 +69,7 @@ export default function Navbar() {
                 >
                   회원가입
                 </Link>
-              </>
+              </div>
             )}
           </div>
         </div>

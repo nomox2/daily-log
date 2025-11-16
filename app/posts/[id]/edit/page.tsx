@@ -177,8 +177,8 @@ export default function EditPostPage() {
                 required
                 maxLength={100}
                 className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-black"
-                style={{ borderColor: 'rgb(229, 229, 229)', color: 'rgb(23, 23, 23)' }}
-                placeholder="제목을 입력하세요"
+                style={{ borderColor: 'rgb(229, 229, 229)', color: 'rgb(23, 23, 23)', paddingLeft: '20px' }}
+                placeholder="제목을 입력해주세요"
               />
             </div>
 
