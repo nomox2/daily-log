@@ -236,18 +236,15 @@ export default function PostWorkspace({ mode, postId }: PostWorkspaceProps) {
       router.push('/auth/signin')
       return
     }
-    if (status === 'authenticated' && session?.user) {
-      setPost((prev) =>
-        prev && prev.id === 'new'
-          ? {
-              ...prev,
-              authorId: session.user.id,
-              author: { nickname: session.user.nickname ?? '나' },
-            }
-            buildEmptyPost(session.user.nickname ?? '나', session.user.id)
-      )
-      setLoading(false)
-    }
+    setPost((prev) =>
+      prev && prev.id === 'new'
+        ? {
+            ...prev,
+            authorId: session.user.id,
+            author: { nickname: session.user.nickname ?? '나' },
+          }
+        : buildEmptyPost(session.user.nickname ?? '나', session.user.id)
+    );
   }, [mode, status, session?.user, router])
 
   const handleLike = async () => {
